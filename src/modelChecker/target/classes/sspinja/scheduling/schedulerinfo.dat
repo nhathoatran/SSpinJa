@@ -1,0 +1,1 @@
+/* no scheduler sporadic process -> set sporadicTime = false for realize the _time variable */	

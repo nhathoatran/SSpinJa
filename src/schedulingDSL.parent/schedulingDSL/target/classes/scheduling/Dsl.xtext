@@ -1,0 +1,816 @@
+grammar scheduling.Dsl with org.eclipse.xtext.common.Terminals
+
+generate dsl "http://www.Dsl.scheduling"
+
+
+Model:
+	gen = GenDSL | processconfig = ProcessConfiguration | proc = ProcessDSL | sch = SchedulerDSL | test = TestDSL ; //| spec = Specification;
+
+GenDSL :
+	gen = Generate
+	function = InterfaceDef?
+	isr = ISR 
+;
+	
+ISR: 
+	'ISR' element = Element 'in' '(' start=INT ',' end=INT ')' ('limited' max = INT)? ';';
+	
+	
+TestDSL :
+	'system' '{'
+		specification = Specification
+		configs = Configs ?
+		(scenarios = Scenarios | permutation = Permutation)
+		rule = Rules ?
+		verify = Verify?
+	'}'
+;
+
+//---------------------------------------------------------------------------------
+Configs: {Configs}
+	'configuration' '{'
+		config += Config *
+	'}'
+;
+Config :
+	name = ID config=Configuration 
+;
+Configuration: {Configuration}
+	'{'
+		var += VarInit *
+		collection += CollectionInit *
+		(proc = ID '=' (nul='null' | element = Element) ';') ?
+	'}'
+;
+VarInit:
+	varName = ID '=' val = Value ';';
+
+CollectionInit :
+	//colName=[SchedulerSet|FQN] '=' (set=Set | empty='empty' | full = 'full') ';'
+	colName=SchedulerSet '=' (set=Set | empty='empty' | full = 'full') ';'
+;
+Scenarios: {Scenarios}
+	'scenario' '{' 
+		flow += Flow*
+	'}'
+;
+
+Permutation : 'scenario' 'permutation' 'with' 'step' '=' step = INT ';' ;
+
+Flow:
+	event+=ENAME ('->' event += ENAME)* ';'
+;
+
+ENAME: ((elabel=ELABEL) | (scheventname=EventName));
+
+Rules : {Rules}
+	'rule' '{'
+		r += Rule *
+	'}'
+;
+Rule :
+	rulename = ID '{'
+		'when' ename=ENAME //((eventname = ELABEL) | (scheventname = EventName))
+		//('with' init = Init)? 
+		('where' premise = Condition)? 
+		'then' conclude = Condition 
+	'}' 
+;
+Condition : expr = Or;
+
+//-----------------------------------------------
+Specification: {Specification}
+	'specification' '{'
+//		decl_sch = DeclareSch ?
+		decl_lst = DeclareList ?
+		define = Define?
+		event += DeclareEvent *
+	'}'
+;
+
+DeclareSch : 'using' 'scheduler' ';';
+
+//Module :
+//	 |  //proctype = ProcType   // | init = Init | never = Never | sporadic = Sporadic 
+//;
+
+DeclareList: dec+=OneDec (';' dec+=OneDec) * ';' ;
+
+OneDec: const = ConstDec | var = VarDec | enumdec = EnumDec ;// | arrayDec = ArrayDec ;// | chan = ChanDec;
+
+EnumDec: 'enumtype' type = EnumType '=' '{' enumele += ID (',' enumele+=ID)* '}';
+EnumType: name=ID;
+ConstDec: 'const' name = ID '=' (bvalue = BoolValue |  ivalue = NumValue );
+VarDec: (type=TypeName|enumtype=[EnumType]) name+=VDec (',' name+=VDec)*  ;
+enum TypeName : byte='byte' | int='int' | bool='bool' ;
+VDec : name = ID ('=' (bvalue = BoolValue |  ivalue = NumValue ))? ;
+
+ArrayDec: (type=TypeName) aName = ID '[' num = NumValue ']' ';';
+
+ChanDec: 'chan' cname = ID '=' '[' ivalue = NumValue ']' 'of' '{' type = TypeName '}' ';';
+
+Define: {Define} 'define' '{' 
+	reflist += RefList *
+	function += Function*
+'}';
+
+RefList: name=ID '=' '[' item+=RefListItem (',' item += RefListItem)* ']' ';' ;
+Function: name=ID '(' funcpara=FuncPara? ')' '{'
+	sequence = SequenceAction
+'}';
+
+RefListItem: bvalue = BoolValue |  ivalue = NumValue | id= ID;
+FuncPara: para+=ID (',' para+=ID)*;
+
+DeclareEvent:
+	event = Event 
+;
+
+Event: 'event' elabel = ELABEL '{' 
+			('when' guard = Expression 'then')? 
+			(sequence = SequenceAction | eventfunction = EventFunction)
+		'}'
+;
+EventFunction: name = ID '(' funcpara=ParaListItem? ')' ';';
+ParaListItem: item += RefListItem (',' item += RefListItem)*;
+
+ELABEL: label = ID ;
+
+SequenceAction : action += Action (action += Action) *;
+
+Action: IFs | ASSIGN | SKIP | GUARD ;//  ;
+//		MoveProcess |
+//		MoveSelectedProcess |
+//		GetProcess |
+////		ChangeValue |
+//		IfStatement |
+//		BlockStatement ;
+
+GUARD:	 
+	expr = Expression '->' sequence = Action
+;
+
+IFs : {IFs}
+	'if' 
+		option = Options				 
+	'fi'  ';'
+;
+
+ASSIGN : ChangeValue ;
+
+Options :
+	'::' sequence += SequenceAction 
+	('::' sequence += SequenceAction )*
+	('::' elses = ELSEs)?
+;
+
+ELSEs : 'else' '->' sequence = Action;
+
+SKIP: {SKIP} 'skip' ';';
+
+//VarDef : {VarDef}	'variable' '{' vard += VarDefination*   '}';
+//VarDefination :  (type=VariableType) name+=VarName (',' name+=VarName)* ('=' (bvalue = BoolValue |  ivalue = INT) )? ';' ;
+//VarName : name = ID ;
+
+//ProcType :
+//	(active = Active)? 'proctype' proctype=Process '(' (paralist = ParameterList)? ')'
+//	'{'
+//		sequence = Sequence
+//	'}'
+//;
+//
+//Active : {Active}
+//	'active' ('[' num = NumValue ']')?
+//;
+//
+//Init :
+//	'init' '{' seq = Sequence '}'
+//;
+//
+//Never:
+//	'never' '{' seq = Sequence '}'
+//;
+//
+//Sporadic :
+//	'sporadic' '{' 
+//		(decl_lst += DeclareList)*
+//		seq = Sequence 
+//	'}'
+//;
+//
+////enum Separator : semi_colon = ';' | arrow = '->';
+//
+//Sequence : sequence += Step (';' sequence += Step)* ;
+//
+//
+//Step:
+//	IF | DO |  D_STEP | pATOMIC | AssertStatement | API | GUARD | EXEC | SKIP | LABEL | GOTO | CHANSEND | CHANRECEIVE
+//;
+
+//ARRAYASSIGN : var=AVAR '=' exp=Expression ';';
+
+//GUARD :
+//	expr = Expression '->' seq = Sequence
+//;
+//IF : {IF}
+//	'if' 
+//		option = Options				 
+//	'fi'  
+//;
+//
+//DO : {DO}
+//	'do'
+//		option = Options
+//	'od' 
+//;
+//
+//Options :
+//	'::' sequence += Sequence 
+//	('::' sequence += Sequence )*
+//;
+
+//FOR : 'for' '(' varfef = VarRef ':' expr1 = Expression '..' expr2 = Expression ')' '{' sequence = Sequence '}';
+//FORIN : 'for' '(' varfef1 = VarRef 'in' varref2 = VarRef ')' '{' sequence = Sequence'}' ; 
+//
+//
+//ASSIGN : ChangeValue ;
+//
+//D_STEP :
+//	'd_step''{' sequence = Sequence '}' 
+//;
+//
+//pATOMIC :
+//	'atomic' '{' sequence = Sequence '}' 
+//;
+
+//Assert:
+//	'assert' '(' expr = Expression ')'
+//;
+
+//API : s = 'terminate' '(' ')' ;
+//Array : name = ID;
+//Channel: name = ID;
+//VarRef: name = ID ('[' expr1 = Expression ']')? ('.' expr2 = VarRef)?;
+
+//EXEC:
+//	'exec' element = Element 
+//;
+//
+//SKIP:
+//	s = 'skip' 
+//;
+//
+//LABEL : name = ID ':' seq = Sequence;
+//
+//GOTO: 'goto' label = ID ;
+//
+//CHANSEND: cname = ID '!' value = ID ;
+//CHANRECEIVE: cname = ID '?' value = ID ;
+
+
+//............................................
+
+ProcessConfiguration:
+	'process' name = ID ('refines' parent = ID)? '{'		
+		(attribute = Attribute)?
+		defbehaviorproc = DefBehaviorProc 
+	'}'
+	
+	'configuration' '{'
+		processconfig = ProcessConfig?
+		processinit = ProcessInit
+	'}'
+;
+
+DefBehaviorProc: processbehaviors = ProcessBehaviors | proctype = ProcType ;
+
+ProcType: {ProcType} proctype += ProcessType*;
+
+ProcessType : 'proctype' name = ID '{'
+		(constraints = Constraints)?
+		(processbehavior += ProcessBehavior)*
+	'}'
+;
+Attribute: {Attribute}'attribute' '{' 
+		att += AttDef * 
+		(constraints = Constraints)?		
+	'}'
+;
+AttDef : name = ID ':' 'type' '=' type = VariableType (',' 'value' '=' list= ListDef)? ',' 'default' '=' default = Value ';';
+Constraints: {Constraints} 'constraint' '{' constraint += Constraint * '}' ;
+Constraint : condition = Condition ';';
+ProcessBehaviors: {ProcessBehaviors}
+	'behavior' '{'
+		processbehavior += ProcessBehavior* 
+	'}'
+;
+ProcessBehavior: constructor = Constructor |  method = Method ;
+Constructor: 'constructor' ':' processname=ID '(' (paralist = ParameterList)? ')' ';';
+Method: 'method' ':' functionname = FunctionName 
+	(
+		('(' ')' ';') |
+		('('parameterlist = InterfaceParameterList ')' '{'
+				assignparameters += AssignParameters*
+				constraints = Constraints? 
+			'}'
+		)
+	)
+		
+//		invariants = Invariants?
+;
+Invariants: {Invariatnts} 'invariant' '{' invariant += Constraint * '}' ;
+AssignParameters: paraname=ID ':' 'value' '=' list = ListDef ';' ;
+//---------------------------------------------------------------------------------
+ProcessDSL: {ProcessDSL}	
+	//procvard +=VarDefinition * //for promela files
+	 
+	'def' 'process' name = ID ('refines' parent = ID) ? '{'  	 		
+		processdata = ProcessDataDef? 
+		constraints = Constraints ?
+		process += ProcessDef*
+	'}' 
+	
+	processconfig = ProcessConfig?
+	processinit = ProcessInit?
+; 
+
+
+
+enum VariableType returns String:	temp = 'int_temp' | byte='byte' | int='int' | time='time' | bool='bool' | clock='clock' | process='process';
+Value: {Value} num = NumValue | bool = BoolValue | nondef = '?' | list = ListDef ;
+ListDef : '[' list += List (',' list += List) * ']';
+List: range = Range | num = NumValue | id = ID | bool = BoolValue;
+Range : start = NumValue '..' end = NumValue;
+NumValue : (minus = '-')? value = INT ;
+BoolValue: value = ('true' | 'false');
+ 
+ProcessDataDef : {ProcessDataDef} 'attribute' '{' properties += ProcessPropertyDef*	'}' ;
+ProcessPropertyDef : {ProcessPropertyDef} (var?='var' | val?='val')? (type=VariableType) name+=ProcessPropertyName (',' name+=ProcessPropertyName)*  ('=' pvalue= Value )? ';' ;
+ProcessPropertyName returns ProcessPropertyName : name=ID ;
+
+ProcessDef:	
+	'proctype' proctype=Process '(' (paralist = ParameterList)? ')'  
+	'{'		
+		propertyassignment += PropertyAssignment *
+	'}'
+;
+
+ParameterList :
+	para += ParameterAssign (';' para += ParameterAssign) *
+;
+ParameterAssign: type = VariableType paraname += ParameterName (',' paraname += ParameterName)* ('=' val = Value) ?;
+ParameterName: name = ID;
+Process: name = ID;
+
+PropertyAssignment : {PropertyAssignment} 
+	('this' '.')? propers = ProcessPropertyName '=' (pvalue = Value | pname = ParameterName) ';'
+//	name = QualifiedNames '=' (pvalue = Value | pname = [ParameterName]) ';'
+;
+
+ProcessConfig : {ProcessConfig}
+	'config' '{'
+		procinit += ConfigProcess *
+	'}'  
+;
+ConfigProcess:	
+	sporadic = SporadicProcess | periodic = PeriodicProcess
+;
+
+SporadicProcess: 
+	'sporadic' 'process'  element = Element 'in' '(' start=INT ',' end=INT ')' ('limited' max = INT)? ';';
+PeriodicProcess: 
+	'periodic' 'process' element = Element 'offset' '=' offset = NumValue 'period' '=' period = NumValue ('limited' max=INT)? ';';
+
+
+ProcessInit:
+	'init' '{'
+		'[' order +=  Set (',' order += Set) * ']' 
+	'}'
+;
+
+Set: set = '{' element += Element  (',' element += Element)* '}';
+Element: process=Process '(' (paraAssign += Value (',' paraAssign += Value)* )? ')';
+
+//............................................
+
+SchedulerDSL : 
+	defcore = DefCore?
+	scheduler = SchedulerDef	
+	order = OrderingDef?
+	verify = Verify ?
+	//gentemplate = GenTemplate?
+;
+
+DefCore: '#''def' 'num_core' '=' numcore = INT ';';
+
+//---------------------------------------------------------------------------------
+//RTCTL formula
+
+RTCTL :	
+	op = '(' exp =  Expression  ')'|
+	op = 'not' f = RTCTL  |	
+	op = 'or' f1 = RTCTL  f2 = RTCTL |
+	op = 'implies' f1 = RTCTL  f2 = RTCTL |
+	
+	op = 'AX' f = RTCTL  |
+	op = 'AF' (lte = LTE) ?  f = RTCTL  |
+	op = 'AG' (lte = LTE) ? f = RTCTL  |
+	
+	op = 'EX' f = RTCTL |
+	op = 'EF' (lte = LTE) ? f = RTCTL  |
+	op = 'EG' (lte = LTE) ? f = RTCTL  |
+	
+	op = 'AU' (lte = LTE) ?  f1 = RTCTL f2 = RTCTL  |
+	op = 'EU' (lte = LTE) ?  f1 = RTCTL f2 = RTCTL 
+;
+
+
+//
+//RTCTLOr returns RTCTL: 
+//	RTCTLImplies ({RTCTLOr.f1=current} op = '||' f2=RTCTLImplies)* 
+//;
+//
+//RTCTLImplies returns RTCTL: 
+//	RTCTL ({RTCTLImplies.f1=current} op = '=>' f2=RTCTL)* 
+//;
+
+LTE: '<=' num = INT;
+CTL_AT : '@' cond = Expression ':';
+
+Verify: 'verify' '{' (at = CTL_AT)? formula = RTCTL '}';
+
+
+OrderingDef : {OrderingDef} 
+	'comparator' '{'	 
+		vars = CompVarDef ?
+		compare += ComparationDef *
+	'}'
+;
+CompVarDef : {CompVarDef}	'variable' '{' vard += CompVarDefination*   '}';
+CompVarDefination :  (type=VariableType) name+=CompVarName (',' name+=CompVarName)* ('=' pvalue= Value )? ';' ;
+CompVarName : name = ID ;
+
+ComparationDef :
+	'comparetype' cname=ComparationName '(' 'process' process1 = Process ',' process2=Process ')' '{'
+		statements += Statement*		 
+	'}'
+;
+ComparationName : name = ID;
+
+ReturnStatement : 	'return' value=OrderType ';' ;
+enum OrderType : greater='greater' | less='less' | equal = 'equal' | fifo = 'fifo' | lifo = 'lifo';
+
+
+SchedulerDef:
+'scheduler' name=ID '(' (parameterlist = ParameterList)? ')' ('refines' parent = ID) ? '{'					
+		gen= Generate?
+		svar = VarDef?
+		schedulerdata = SchedulerDataDef?		
+		schedulerinit = SchedulerInit?
+		handler = HandlerDef?	
+		interface = InterfaceDef?		
+'}' ;
+
+SchedulerInit: {SchedulerInit} 'scheduler' 'init' '{' initstm += Statement* '}';
+IfDef : '#' 'ifdef' '(' cond = Expression ')';
+InterfaceDef: {InterfaceDef}
+	'interface' '{'
+		interfacefunction  += InterfaceFunction * 
+	'}'
+;
+
+InterfaceFunction:
+	'function' functionname = FunctionName '('(parameterlist = InterfaceParameterList)? ')' '{' 
+//		(statements += Statement)*
+		(statements += Stm)*
+	'}'
+;
+InterfaceParameterList :
+	para += InterfaceParameterDeclare (';' para += InterfaceParameterDeclare) *
+;
+InterfaceParameterDeclare: type = VariableType paraname = ID  ;
+
+
+FunctionName: name = ID;
+ 
+VarDef : {VarDef}	'variable' '{'
+		vard +=VarDecl *   
+	'}'
+;
+VarDecl : (ifdef = IfDef)? (varblockdef = VarBlockDef | varsingledef = VarSingleDef ) ;
+VarBlockDef : '{' vardef += VarDefinition '}' ;
+VarSingleDef : vardef = VarDefinition ;
+VarDefinition :   (type=VariableType) name+=VarName (',' name+=VarName)* ('=' (bvalue = BoolValue |  ivalue = NumValue) )? ';' ;
+VarName : name = ID ;
+
+SchedulerDataDef: {SchedulerDataDef} 
+	'data' '{'
+		datadef += DataDef *  
+	'}' 
+;
+DataDef: (ifdef = IfDef)? (datablockdef = DataBlockDef | datasingledef = DataSingleDef);
+DataBlockDef: {DataBlockDef} '{' datadef += DataSingleDef * '}';
+DataSingleDef: prop = SchedulerPropertyDef | col = SchedulerCollectionDef;
+SchedulerPropertyDef : (type=VariableType) name+=SchedulerPropertyName (',' name+=SchedulerPropertyName)* ('=' (bvalue = BoolValue |  ivalue = NumValue) )? ';' ;
+SchedulerPropertyName : name=ID ;
+
+SchedulerCollectionDef: (parent = 'refines')? 'collection' name = SchedulerSet ('using' comp+=ComparationName (',' comp+=ComparationName)*)?  ('with' operationtype = OperationType)?';'  ;
+enum OperationType returns String: queue='fifo' | stack='lifo';
+SchedulerSet : name = ID;
+
+
+
+//Generating code
+Generate:
+	'generate' '{'
+		genconfiguration = GenConfiguration 
+		(gencomponent = GenComponent)?
+		(stepgeneration = StepGeneration | processgeneration = ProcessGeneration)?
+	'}';
+
+GenConfiguration:
+	'configuration' '{'
+		(generateoption = GenerateOption ';')?
+		(directory = Directory ';')?
+		(filename = FileName ';')?
+		(fileextension = FileExtension ';')?
+		'test' test = ('program' | 'case' | 'data') '=' testpart = TestPart ';' 		 
+	'}';
+
+GenerateOption: 'option' '=' '{' option+=GenOption (',' option += GenOption)* '}';
+enum GenOption  returns String : ndbehavior='ND_behavior' | searching='Searching' | error='Error' | property='Property' | all='All';
+Directory: 'directory' '=' name=CHAR_SEQUENCE;
+FileName: 'file' 'name' '=' name=CHAR_SEQUENCE;
+FileExtension: 'file' 'extension' '=' name=CHAR_SEQUENCE;
+TestPart: part+=GenPart('+' part += GenPart)* ;
+//GenPart: '(' (prefix=CHAR_SEQUENCE '+')? name= (ID|'init'|'processes'|'behaviors'|'error') ('+' posfix=CHAR_SEQUENCE)? ')';
+GenPart: '(' (prefix=CHAR_SEQUENCE '+')? name= (ID|'processes'|'steps'|'error') ('+' posfix=CHAR_SEQUENCE)? ')';
+
+GenComponent: 'component' '{'
+		(component += Component)
+		(component += Component)*			
+//		(initgeneration = InitGeneration)?		
+	'}';
+Component: name = ID '{' 
+		(template = SetTemplate)?
+		'contains' '{'
+			(stm+=(GenCodeStatement|GenLnCodeStatement))*
+		'}' 
+	'}'
+;
+//InitGeneration: 'init' '{' 	init = Template '}' ;
+ProcessGeneration: 'process' '{' process = Template '}' ;
+StepGeneration: 'step' '{' step = Template '}' ;
+Template: (template = SetTemplate)? behavior = Behavior (ND_behavior = ND_Behavior)?;
+SetTemplate : 'template' '=' templ = Expression ';';
+Behavior : 'action' '=' eventtemplate += EventTemplate ('+' eventtemplate += EventTemplate)* ';' ;
+EventTemplate: '(' (prefix = Expression '+')? event = ActionName ('+' postfix = Expression)? ')';
+ND_Behavior : 'nd_action' ('@' cond = Expression)? '=' eventtemplate += EventTemplate ('+' eventtemplate += EventTemplate)* ';' ;
+	
+HandlerDef:	{HandlerDef}
+	'event' 'handler' '{'		
+		(event += EventDef)* 
+	'}'
+;
+
+EventDef:
+	eventname = EventName '('('process' processname = Process)? ')'		
+	'{'		
+//		(statements += Statement)*
+		event = (EventOpt | EventStm)
+//		(statements += Stm)*		
+//		(ifdef = IfDef)?  (statements = MoveProcess | loopst = LoopProcess | getst = GetProcess)
+	'}'
+;
+
+EventOpt : opt += Opt (opt += Opt)* ;
+Opt : 'opt' '{'
+		 eventstm = EventStm
+	'}'
+;
+
+EventStm: statements += Stm	(statements += Stm)*;
+
+Stm : (ifdef = IfDef)? (statement = Statement);
+
+enum ActionName  returns String : 
+	aselect = '<select_process>' |
+	anew='<new_process>' |
+	aclock='<clock>' |
+	apretake = '<pre_take>' | 
+	aposttake = '<post_take>' |
+	aschedulingaction = '<scheduling_action>' |
+	aprocessaction = '<process_action>'
+;
+
+enum EventName  returns String : 
+	select = 'select_process' | new='new_process' |	clock='clock' | 
+	pretake = 'pre_take' | posttake = 'post_take' 
+; 
+
+Statement: 
+		JavaCode |
+		MoveProcess |
+		ReorderProcess |
+		SetProcessInstance |
+		LoopProcess |
+		GetProcess |
+		//ExecuteProcess | -> need to select
+		RemoveProcess |
+		ChangeValue |
+		SetExecTime |
+		SetReturnCol |
+		SetReturnSet |
+		IfStatement |	
+		AssertStatement |
+		PrintStatement |
+		PrintLogStatement |
+		GenCodeStatement |
+		GenLnCodeStatement |
+		NewProcessStatement |
+		CallFunction  | 
+		BlockStatement | 
+		ReturnStatement |
+		CheckPoint |
+		DeclareProcess |
+		SetProcess 
+;
+
+JavaCode: 'code' code = ML_CODE ;
+terminal ML_CODE	: '{*' -> '*}';
+
+//SetGenTemplate : 'template' '<' event+= EventName (',' event+=EventName)* '>' ';';
+
+DeclareProcess: 'process' process=Process ';';
+SetProcess: process=Process '=' 'get_process' '(' (id = INT | pid =ID) ')' ';';
+
+SetExecTime: 'time_slice' '=' expr = Expression ';';
+SetReturnCol: 'return_set' '=' col = SchedulerSet ';';
+SetReturnSet: 'return_set' '=' '{' col += SchedulerSet (',' col += SchedulerSet)* '}' ';';
+
+CheckPoint: 'checkpoint' pointid = PointID ';' ;
+PointID: name = ID;
+
+CallFunction: 'call' funcName = FunctionName '(' process = Process  (',' parameterlist = InterfaceParameterList)? ')' ';' ;
+RemoveProcess: 'remove' process = Process ';';
+MoveProcess: 'move' process = Process 'to' colTo = SchedulerSet ';' ;
+ReorderProcess: 'reorder' process = Process 'in' colTo = SchedulerSet ';' ;
+SetProcessInstance: 'set' process = Process 'to' colTo = SchedulerSet ';' ;
+
+LoopProcess: 
+	'for' 'each' 'process' pname=Process 'in' colFrom=SchedulerSet statement = Statement
+;
+
+ChangeAction : {ChangeAction}	'set' '{' sta += (ChangeValue | AssertStatement) * '}' ;
+
+GetProcess:
+	'get' 'process' 'from' colFrom=SchedulerSet
+	(change = ChangeAction) ? 'to' 'run' 
+	('in' 'time' '=' time=Expression 'then' 'return' 'to' colTo=SchedulerSet)? ';' 
+;
+
+ExecuteProcess: 'execute' process=Process ';';
+
+IfStatement:
+	'if' '(' condition=Expression ')' 
+		thenBlock=Statement
+	(=>'else' elseBlock=Statement)?
+;
+
+BlockStatement : {BlockStatement}
+	'{' statements += Statement * '}'
+;
+
+NewProcessStatement: 'new' element = NewElement (',' max = INT)?  ';' ;
+NewElement: process=Process '(' (paraAssign += ParaValue (',' paraAssign += ParaValue)* )? ')';
+ParaValue: {ParaValue} num = NumValue | bool = BoolValue | id = ID ;
+
+AssertStatement: 'assert'  expr = Expression ';' ;
+
+PrintStatement: 'print' st = Expression ';';
+PrintLogStatement: 'printlog' st = Expression ';';
+GenCodeStatement: 'gen' (comp=ID ',')? st = Expression ';';
+GenLnCodeStatement: 'genln' (comp=ID ',')? st = Expression ';';
+
+ChangeValue : ChangeValueUnOp | ChangeValueExpression | ChangeListValue ;
+ChangeValueUnOp : var=QualifiedNames op=('++' | '--') ';';
+ChangeValueExpression: var=QualifiedNames '=' exp=Expression ';';
+//ChangeArrayValue : avar = ID '[' expr = Expression ']' '=' exp=Expression ';';
+ChangeListValue : lvar = ListElement '=' exp=Expression ';';
+
+
+Expression: Or;
+Or returns Expression: And ({Or.left=current} "||" right=And)*;
+And returns Expression: Equality ({And.left=current} "&&" right=Equality)*;
+Equality returns Expression:
+	Comparison (
+		{Equality.left=current} op=("=="|"!=")
+		right=Comparison
+	)*;
+Comparison returns Expression:
+	PlusOrMinus (
+		{Comparison.left=current} op=(">="|"<="|">"|"<")
+		right=PlusOrMinus
+	)*;
+PlusOrMinus returns Expression:
+	MulOrDiv (
+		({Plus.left=current} '+' | {Minus.left=current} '-')
+		right=MulOrDiv
+	)*;
+//MulOrDiv returns Expression:
+//	Primary (
+//		{MulOrDiv.left=current} op=('*'|'/')
+//		right=Primary
+//	)*;
+
+MulOrDiv returns Expression:
+	Implies (
+		{MulOrDiv.left=current} op=('*'|'/')
+		right=Implies
+	)*;
+
+Implies returns Expression: 
+	Primary(
+		{Implies.left=current} op=('=>')
+		right=Primary
+	)* ;
+	
+
+Primary returns Expression:
+	'(' Expression ')' | {Not} '!' expression=Primary | 
+	Atomic | EmptyExpression | FullExpression | NullExpression | 
+	InExpression | InPIDExpression | InPExpression |  
+	ExistExpression | ExistPID | ExistP | GetIDExpression | HasNameExpression | 
+	HasID | HasIDINT | GetName;// | ExistsProcessExpression | AllExpression ;
+
+
+//GetName: 'get_name' '('proc = Process ')';
+//EmptyExpression: 'empty' '(' col= [SchedulerSet] ')' ;	
+//InExpression:  col = [SchedulerSet] '.' 'hasProcess' '(' proc = ID ')';
+//ExistExpression: '(' '<>' proc = Process 'in' col = SchedulerSet ':' bexpr = Or ')';
+//AllExpression: '(' '[]' proc = Process 'in' col = SchedulerSet ':' bexpr = Or ')';
+
+
+GetIDExpression: 'get_pid' '(' pN = CHAR_SEQUENCE ')';
+EmptyExpression: col= SchedulerSet '.''isEmpty' '(' ')' ;
+FullExpression: col= SchedulerSet '.''isFull' '(' ')' ;
+
+InExpression:  col = SchedulerSet '.' 'containsProcess' '(' pN = CHAR_SEQUENCE ')';
+InPIDExpression:  col = SchedulerSet '.' 'containsProcess' '(' id = ID ')';
+InPExpression:  col = SchedulerSet '.' 'containsProcess' '(' id = INT ')';
+
+ExistExpression:  'exists' '(' pN = CHAR_SEQUENCE ')';
+ExistPID: 'exists' '(' id = ID ')';
+ExistP: 'exists' '(' id = INT ')';
+
+NullExpression: procName = Process '.' 'isNull' '(' ')' ;
+HasNameExpression: proc= Process '.' 'hasName' '(' pN = CHAR_SEQUENCE ')';
+HasID : proc= Process '.' 'hasID' '(' id = ID ')' ;
+HasIDINT : proc= Process '.' 'hasID' '(' id = INT ')' ;
+GetName : proc = Process '.' 'getName' '(' ')' ;
+
+Atomic :
+	{IntConstant} value=NumValue |	
+	{CurentCore} value = 'current_core' |
+	{BoolConstant} value=('true'|'false') |
+	{StateID} stateID = '<StateID>' |
+	{BranchID} branchID = '<BranchID>' |
+	{Action} action = 'getAction()' |
+	{Step} step = 'getStep()' |
+	{TotalStep} totalstep = 'getTotalStep()' |
+	{GetInstance} procName = Process '.' 'getInstanceID' '(' ')' |
+	{GetPID} procName = Process '.' 'getPID' '(' ')' |	
+	{InstanceID} instanceID = '<InstanceID>' |
+	{ProcessID} pID = '<PID>' |
+	{ProcessName} pName = '<PName>' |
+	{Behavior} behavior = '<actions>' |
+	{Contains} contains = '<contains>' |		
+	var = QualifiedNames | 
+	lele = ListElement |
+	charseq = CHAR_SEQUENCE | string = STRING |
+	sysvar = SysVar 
+	//refitem = RefItem
+;
+
+//RefItem: refid=ID '[' refitem = RefListItem ']';
+
+SysVar : 'Sys' '(' vname = ID ')' ;
+//AVAR : name = ID '[' expr = Expression ']';
+//ArrayDec: (type=TypeName) aName = DecName '[' num = NumValue ']';
+
+QualifiedNames: {QualifiedNames} name = ID ('.' prop = ProcessPropertyName) ?;
+//QualifiedNames: name = ID (proper = Proper ) ?; //| avar = AvarElement
+//QualifiedNames: {QualifiedNames} ID (=> '.' ID)* ; //| avar = AvarElement
+Proper : '.' prop = ProcessPropertyName;
+ListElement : name = ID '[' (id=ID|num=INT) ']' ;
+//QualifiedNames: name = ID ( => '[' expr = Expression ']') ?;
+
+FQN : ID('.'ID)*;
+//--------------------------------------------------------------------------------------
+
+terminal CHAR_SEQUENCE: '"' -> '"';
+
+terminal ID :('^')?(('a'..'z')|('A'..'Z')|'_') (('a'..'z')|('A'..'Z')|('0'..'9')|'_')* ;
+terminal ML_COMMENT	: '/*' -> '*/';
+terminal SL_COMMENT : '//' -> '\n';
+terminal WS			: (' '|'\t'|'\r'|'\n')+;

@@ -1,0 +1,13 @@
+111372->0->Select process
+1798083->52->(proc 2 trans 52): ((a + b) < 5)
+180546->41->(proc 2 trans 41): b++
+311265->52->(proc 2 trans 52): ((a + b) < 5)
+834084->41->(proc 2 trans 41): b++
+818801->52->(proc 2 trans 52): ((a + b) < 5)
+1776456->41->(proc 2 trans 41): b++
+210136->52->(proc 2 trans 52): ((a + b) < 5)
+1709411->41->(proc 2 trans 41): b++
+1301329->52->(proc 2 trans 52): ((a + b) < 5)
+846499->41->(proc 2 trans 41): b++
+1830182->53->(proc 2 trans 53): else
+269251->45->(proc 2 trans 45): assert (a >= b)
