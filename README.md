@@ -26,8 +26,7 @@ SSpinJa is a tool which aims to verify and analyze the behaviors of the system r
 ### a) The input of the tool contains three files, including:
 1. A process model which is written in modeling language (this language is based on Promela with some extensions for the scheduling policy);
 1. A process description (in DSL) which defines the attributes of the process;
-1. A scheduler description (in DSL) which speci
-fies the scheduling policy.
+1. A scheduler description (in DSL) which specifies the scheduling policy.
 
 
 ### b) Perform the verifying and analyzing task as follows:
@@ -43,8 +42,8 @@ fies the scheduling policy.
 1. Add the specification of the scheduling policy in the DSL (process description and the scheduling policy).
 1. Do the verification (and/or the simulation as needed).
 
-## 5. Source code for the DSL and the model checker
-See the modelChecker and schedulingDSL.parent directory.
+## 5. Source code for the DSL and the model checker (GUI version - updated!)
+See the modelChecker and schedulingDSL.parent directories in src directory.
 
 **See the explaination of the results on: results.pdf**
 
