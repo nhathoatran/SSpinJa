@@ -34,6 +34,8 @@ SSpinJa is a tool which aims to verify and analyze the behaviors of the system r
 1. Compile the process model (for analyzing the system behaviors with CTL/RTCTL formula, please use "-a" parameter);
 1. Execute the verifier/analyzer.
 
+**See the explaination of the results on: results.pdf**
+
 ## 4. Deployed plugin for Eclipse IDE and Model checker (Java library) (GUI version - updated!)
 1. Install the plugin for Eclipse (download the directory: deployed\EclipsePlugin, then in Eclipse, go to Help > Install New Software. ... browse to the downloaded directory to install it).
 1. Download the Java library (jar file) for the model checker (in deployed\ModelChecker).
@@ -44,9 +46,6 @@ SSpinJa is a tool which aims to verify and analyze the behaviors of the system r
 
 ## 5. Source code for the DSL and the model checker (GUI version - updated!)
 See the modelChecker and schedulingDSL.parent directories in src directory.
-
-**See the explaination of the results on: results.pdf**
-
 
 ----------------------------------------
 [1] Nhat-Hoa Tran, Yuki Chiba, Toshiaki Aoki:
