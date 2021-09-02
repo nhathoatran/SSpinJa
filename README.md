@@ -1,6 +1,7 @@
 # **SSpinJa**
 ## 1. Description
 SSpinJa is a tool which aims to verify and analyze the behaviors of the system run under different scheduling policies using model checking techniques. We propose a method using a domain-specific language (DSL) for describing the behaviors of the scheduler. This language provides a high-level support for the succinct specification of different scheduling policies. The necessary artifacts are automatically generated from the corresponding specification of the scheduling policy for subsequent analysis of the behaviors of the system, which are described in a modeling language (i.e. Promela). We implement a search algorithm that uses the information above (realized from the specification of the scheduling policy) to explore the system state space and verify the behaviors of the system.
+A short demo video of SSpinJa is available at Youtube: https://youtu.be/YQyQT0zpHVU
 
 ## 2. Files
 ### a) To verify and analyze (command line version)
